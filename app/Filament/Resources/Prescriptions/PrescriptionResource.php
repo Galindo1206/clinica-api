@@ -32,6 +32,8 @@ class PrescriptionResource extends Resource
 
     protected static string|UnitEnum|null $navigationGroup = 'Gestión Clínica';
 
+    protected static ?int $navigationSort = 4;
+
     public static function form(Schema $schema): Schema
     {
         return PrescriptionForm::configure($schema);

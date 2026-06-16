@@ -6,6 +6,7 @@ use App\Filament\Resources\Doctors\Pages\CreateDoctor;
 use App\Filament\Resources\Doctors\Pages\EditDoctor;
 use App\Filament\Resources\Doctors\Pages\ListDoctors;
 use App\Filament\Resources\Doctors\Pages\ViewDoctor;
+use App\Filament\Resources\Doctors\RelationManagers\SchedulesRelationManager;
 use App\Filament\Resources\Doctors\Schemas\DoctorForm;
 use App\Filament\Resources\Doctors\Schemas\DoctorInfolist;
 use App\Filament\Resources\Doctors\Tables\DoctorsTable;
@@ -32,6 +33,8 @@ class DoctorResource extends Resource
 
     protected static string|UnitEnum|null $navigationGroup = 'Gestión Clínica';
 
+    protected static ?int $navigationSort = 2;
+
     public static function form(Schema $schema): Schema
     {
         return DoctorForm::configure($schema);
@@ -50,7 +53,7 @@ class DoctorResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            SchedulesRelationManager::class,
         ];
     }
 
@@ -67,6 +70,6 @@ class DoctorResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()
-            ->with('user');
+            ->with(['user', 'schedules']);
     }
 }

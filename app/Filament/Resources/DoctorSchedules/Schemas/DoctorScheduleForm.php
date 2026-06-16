@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\DoctorSchedules\Schemas;
 
 use App\Models\Doctor;
+use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TimePicker;
 use Filament\Forms\Components\Toggle;
@@ -34,15 +35,25 @@ class DoctorScheduleForm
                             ->placeholder('Selecciona un médico'),
                     ]),
 
-                Section::make('Día y horario')
+                Section::make('Días y horario')
                     ->description('Bloque de atención usado por la disponibilidad automática.')
                     ->icon(Heroicon::OutlinedClock)
                     ->columns(2)
                     ->schema([
+                        CheckboxList::make('days')
+                            ->label('Días de atención')
+                            ->options(self::dayOptions())
+                            ->columns(4)
+                            ->visible(fn (string $operation): bool => $operation === 'create')
+                            ->required(fn (string $operation): bool => $operation === 'create')
+                            ->columnSpanFull(),
+
                         Select::make('day_of_week')
                             ->label('Día de semana')
                             ->options(self::dayOptions())
-                            ->required()
+                            ->visible(fn (string $operation): bool => $operation !== 'create')
+                            ->dehydrated(fn (string $operation): bool => $operation !== 'create')
+                            ->required(fn (string $operation): bool => $operation !== 'create')
                             ->placeholder('Selecciona un día'),
 
                         Select::make('slot_minutes')

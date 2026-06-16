@@ -4,11 +4,16 @@ namespace App\Filament\Resources\Appointments\Schemas;
 
 use App\Models\Doctor;
 use App\Models\Patient;
+use App\Services\AvailabilityService;
+use Carbon\Carbon;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 
@@ -46,17 +51,61 @@ class AppointmentForm
                                 ]))
                             ->searchable()
                             ->preload()
+                            ->live()
+                            ->afterStateUpdated(function (Set $set): void {
+                                $set('appointment_date', null);
+                                $set('available_time', null);
+                                $set('scheduled_at', null);
+                            })
                             ->required()
                             ->placeholder('Selecciona un médico'),
                     ]),
 
                 Section::make('Programación')
-                    ->description('Fecha, hora y duración administrativa de la cita.')
+                    ->description('Selecciona un médico, fecha y horario disponible.')
                     ->icon(Heroicon::OutlinedCalendarDays)
                     ->columns(2)
                     ->schema([
+                        DatePicker::make('appointment_date')
+                            ->label('Fecha')
+                            ->placeholder('Selecciona una fecha')
+                            ->native(false)
+                            ->live()
+                            ->dehydrated(false)
+                            ->visible(fn (string $operation): bool => $operation === 'create')
+                            ->required(fn (string $operation): bool => $operation === 'create')
+                            ->afterStateUpdated(function (Set $set): void {
+                                $set('available_time', null);
+                                $set('scheduled_at', null);
+                            }),
+
+                        Select::make('available_time')
+                            ->label('Horario disponible')
+                            ->placeholder('Selecciona fecha y médico')
+                            ->options(fn (Get $get): array => self::availableTimeOptions($get))
+                            ->searchable()
+                            ->live()
+                            ->dehydrated(false)
+                            ->visible(fn (string $operation): bool => $operation === 'create')
+                            ->required(fn (string $operation): bool => $operation === 'create')
+                            ->disabled(fn (Get $get): bool => blank($get('doctor_id')) || blank($get('appointment_date')))
+                            ->afterStateUpdated(function (?string $state, Get $get, Set $set): void {
+                                if (blank($state) || blank($get('appointment_date'))) {
+                                    $set('scheduled_at', null);
+
+                                    return;
+                                }
+
+                                $set(
+                                    'scheduled_at',
+                                    Carbon::parse(Carbon::parse($get('appointment_date'))->format('Y-m-d') . ' ' . $state)->toDateTimeString(),
+                                );
+                            }),
+
                         DateTimePicker::make('scheduled_at')
                             ->label('Fecha y hora')
+                            ->hidden(fn (string $operation): bool => $operation === 'create')
+                            ->dehydrated()
                             ->required()
                             ->seconds(false)
                             ->placeholder('Selecciona fecha y hora'),
@@ -112,5 +161,30 @@ class AppointmentForm
                             ->rows(3),
                     ]),
             ]);
+    }
+
+    private static function availableTimeOptions(Get $get): array
+    {
+        if (blank($get('doctor_id')) || blank($get('appointment_date'))) {
+            return [];
+        }
+
+        $doctor = Doctor::find($get('doctor_id'));
+
+        if (! $doctor) {
+            return [];
+        }
+
+        $availability = AvailabilityService::getDoctorAvailability(
+            $doctor,
+            Carbon::parse($get('appointment_date'))->format('Y-m-d'),
+        );
+
+        return collect($availability['slots'])
+            ->filter(fn (array $slot): bool => $slot['available'])
+            ->mapWithKeys(fn (array $slot): array => [
+                $slot['time'] => $slot['time'],
+            ])
+            ->all();
     }
 }

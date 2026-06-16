@@ -13,35 +13,42 @@ class RoleSeeder extends Seeder
      */
     public function run(): void
     {
-        Role::insert([
+        $roles = [
             [
                 'name' => 'admin',
                 'description' => 'Administrador general del sistema',
                 'is_active' => true,
-                'created_at' => now(),
-                'updated_at' => now(),
             ],
             [
                 'name' => 'patient',
                 'description' => 'Paciente con acceso a su bóveda médica',
                 'is_active' => true,
-                'created_at' => now(),
-                'updated_at' => now(),
             ],
             [
                 'name' => 'doctor',
                 'description' => 'Médico autorizado para revisar historias clínicas',
                 'is_active' => true,
-                'created_at' => now(),
-                'updated_at' => now(),
+            ],
+            [
+                'name' => 'receptionist',
+                'description' => 'Recepcionista con acceso operativo al panel',
+                'is_active' => true,
             ],
             [
                 'name' => 'clinic_admin',
                 'description' => 'Administrador de clínica o consultorio',
                 'is_active' => true,
-                'created_at' => now(),
-                'updated_at' => now(),
             ],
-        ]);
+        ];
+
+        foreach ($roles as $role) {
+            Role::updateOrCreate(
+                ['name' => $role['name']],
+                [
+                    'description' => $role['description'],
+                    'is_active' => $role['is_active'],
+                ],
+            );
+        }
     }
 }

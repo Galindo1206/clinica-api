@@ -32,6 +32,8 @@ class DoctorScheduleResource extends Resource
 
     protected static string|UnitEnum|null $navigationGroup = 'Agenda Médica';
 
+    protected static ?int $navigationSort = 2;
+
     public static function form(Schema $schema): Schema
     {
         return DoctorScheduleForm::configure($schema);

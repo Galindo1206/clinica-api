@@ -32,6 +32,8 @@ class ConsultationResource extends Resource
 
     protected static string|UnitEnum|null $navigationGroup = 'Gestión Clínica';
 
+    protected static ?int $navigationSort = 3;
+
     public static function form(Schema $schema): Schema
     {
         return ConsultationForm::configure($schema);

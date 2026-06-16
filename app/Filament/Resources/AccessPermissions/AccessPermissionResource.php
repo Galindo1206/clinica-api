@@ -24,11 +24,11 @@ class AccessPermissionResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedKey;
 
-    protected static ?string $modelLabel = 'Permiso de Acceso';
+    protected static ?string $modelLabel = 'Acceso a Expediente';
 
-    protected static ?string $pluralModelLabel = 'Permisos de Acceso';
+    protected static ?string $pluralModelLabel = 'Accesos a Expedientes';
 
-    protected static ?string $navigationLabel = 'Permisos de Acceso';
+    protected static ?string $navigationLabel = 'Accesos a Expedientes';
 
     protected static string|UnitEnum|null $navigationGroup = 'Seguridad';
 

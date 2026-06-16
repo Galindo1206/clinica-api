@@ -32,6 +32,8 @@ class DoctorUnavailabilityResource extends Resource
 
     protected static string|UnitEnum|null $navigationGroup = 'Agenda Médica';
 
+    protected static ?int $navigationSort = 3;
+
     public static function form(Schema $schema): Schema
     {
         return DoctorUnavailabilityForm::configure($schema);

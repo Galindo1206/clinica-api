@@ -7,6 +7,7 @@ use App\Http\Requests\StoreConsultationRequest;
 use App\Models\Consultation;
 use Illuminate\Http\Request;
 use App\Services\AuditLogService;
+use App\Services\AccessPermissionService;
 
 class ConsultationController extends Controller
 {
@@ -20,8 +21,22 @@ class ConsultationController extends Controller
                 ->latest('consultation_date')
                 ->get();
         } elseif ($user->role?->name === 'doctor') {
-            $consultations = Consultation::with(['patient.user', 'vitals'])
-                ->where('doctor_id', $user->doctor->id)
+            $consultations = Consultation::with(['patient.user', 'doctor.user', 'vitals'])
+                ->where(function ($query) use ($user) {
+                    $query->where('doctor_id', $user->doctor->id)
+                        ->orWhereHas('patient.accessPermissions', function ($permissionQuery) use ($user) {
+                            $permissionQuery->where('doctor_id', $user->doctor->id)
+                                ->where('is_active', true)
+                                ->where(function ($q) {
+                                    $q->whereNull('starts_at')
+                                        ->orWhere('starts_at', '<=', now());
+                                })
+                                ->where(function ($q) {
+                                    $q->whereNull('expires_at')
+                                        ->orWhere('expires_at', '>=', now());
+                                });
+                        });
+                })
                 ->latest('consultation_date')
                 ->get();
         } else {
@@ -84,8 +99,17 @@ class ConsultationController extends Controller
             return response()->json(['message' => 'No autorizado.'], 403);
         }
 
-        if ($user->role?->name === 'doctor' && $consultation->doctor_id !== $user->doctor->id) {
-            return response()->json(['message' => 'No autorizado.'], 403);
+        if ($user->role?->name === 'doctor') {
+            $isOwnConsultation = $consultation->doctor_id === $user->doctor->id;
+
+            $hasPermission = AccessPermissionService::doctorCanAccessPatient(
+                $user->doctor,
+                $consultation->patient
+            );
+
+            if (! $isOwnConsultation && ! $hasPermission) {
+                return response()->json(['message' => 'No autorizado.'], 403);
+            }
         }
         AuditLogService::record(
             userId: $user->id,

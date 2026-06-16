@@ -8,6 +8,7 @@ use App\Models\MedicalDocument;
 use App\Services\AuditLogService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use App\Services\AccessPermissionService;
 
 class MedicalDocumentController extends Controller
 {
@@ -20,7 +21,21 @@ class MedicalDocumentController extends Controller
                 ->latest()
                 ->get();
         } elseif ($user->role?->name === 'doctor') {
-            $documents = MedicalDocument::latest()->get();
+            $documents = MedicalDocument::whereHas('patient.accessPermissions', function ($query) use ($user) {
+                $query->where('doctor_id', $user->doctor->id)
+                    ->where('is_active', true)
+                    ->where(function ($q) {
+                        $q->whereNull('starts_at')
+                            ->orWhere('starts_at', '<=', now());
+                    })
+                    ->where(function ($q) {
+                        $q->whereNull('expires_at')
+                            ->orWhere('expires_at', '>=', now());
+                    });
+            })
+                ->orWhere('uploaded_by_user_id', $user->id)
+                ->latest()
+                ->get();
         } else {
             $documents = MedicalDocument::latest()->get();
         }
@@ -82,6 +97,18 @@ class MedicalDocumentController extends Controller
         if ($user->role?->name === 'patient' && $medicalDocument->patient_id !== $user->patient->id) {
             return response()->json(['message' => 'No autorizado.'], 403);
         }
+        if ($user->role?->name === 'doctor') {
+            $hasPermission = AccessPermissionService::doctorCanAccessPatient(
+                $user->doctor,
+                $medicalDocument->patient
+            );
+
+            $uploadedByDoctor = $medicalDocument->uploaded_by_user_id === $user->id;
+
+            if (! $hasPermission && ! $uploadedByDoctor) {
+                return response()->json(['message' => 'No autorizado.'], 403);
+            }
+        }
 
         AuditLogService::record(
             userId: $user->id,
@@ -103,6 +130,18 @@ class MedicalDocumentController extends Controller
 
         if ($user->role?->name === 'patient' && $medicalDocument->patient_id !== $user->patient->id) {
             return response()->json(['message' => 'No autorizado.'], 403);
+        }
+        if ($user->role?->name === 'doctor') {
+            $hasPermission = AccessPermissionService::doctorCanAccessPatient(
+                $user->doctor,
+                $medicalDocument->patient
+            );
+
+            $uploadedByDoctor = $medicalDocument->uploaded_by_user_id === $user->id;
+
+            if (! $hasPermission && ! $uploadedByDoctor) {
+                return response()->json(['message' => 'No autorizado.'], 403);
+            }
         }
 
         if (! Storage::disk('local')->exists($medicalDocument->file_path)) {

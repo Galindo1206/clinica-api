@@ -35,4 +35,8 @@ class Consultation extends Model
     {
         return $this->hasOne(ConsultationVital::class);
     }
+    public function prescriptions()
+    {
+        return $this->hasMany(Prescription::class);
+    }
 }

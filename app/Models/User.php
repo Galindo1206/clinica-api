@@ -10,10 +10,12 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use Filament\Models\Contracts\FilamentUser;
+use Filament\Panel;
 
 #[Fillable(['name', 'email', 'password'])]
 #[Hidden(['password', 'remember_token'])]
-class User extends Authenticatable
+class User extends Authenticatable implements FilamentUser
 {
     /** @use HasFactory<UserFactory> */
     use HasApiTokens, HasFactory, Notifiable;
@@ -55,5 +57,19 @@ class User extends Authenticatable
     public function uploadedMedicalDocuments()
     {
         return $this->hasMany(MedicalDocument::class, 'uploaded_by_user_id');
+    }
+    public function canAccessPanel(Panel $panel): bool
+    {
+        return $this->is_active
+            && $this->role
+            && in_array(strtolower($this->role->name), [
+                'admin',
+                'super_admin',
+                'administrador',
+                'recepcionista',
+                'doctor',
+                'medico',
+                'médico',
+            ]);
     }
 }
